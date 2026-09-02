@@ -1,0 +1,21 @@
+drop policy if exists user_profiles_select_own on public.user_profiles;
+drop policy if exists user_profiles_update_own on public.user_profiles;
+drop policy if exists athlete_profiles_select_own on public.athlete_profiles;
+drop policy if exists athlete_profiles_insert_own on public.athlete_profiles;
+drop policy if exists athlete_profiles_update_own on public.athlete_profiles;
+drop policy if exists provider_connections_select_own on public.provider_connections;
+drop policy if exists provider_connections_insert_own on public.provider_connections;
+drop policy if exists provider_connections_update_own on public.provider_connections;
+drop policy if exists provider_connections_delete_own on public.provider_connections;
+drop policy if exists audit_events_select_own on public.audit_events;
+
+create policy user_profiles_select_own on public.user_profiles for select to authenticated using ((select auth.uid()) is not null and (select auth.uid()) = user_id);
+create policy user_profiles_update_own on public.user_profiles for update to authenticated using ((select auth.uid()) is not null and (select auth.uid()) = user_id) with check ((select auth.uid()) is not null and (select auth.uid()) = user_id);
+create policy athlete_profiles_select_own on public.athlete_profiles for select to authenticated using ((select auth.uid()) is not null and (select auth.uid()) = user_id);
+create policy athlete_profiles_insert_own on public.athlete_profiles for insert to authenticated with check ((select auth.uid()) is not null and (select auth.uid()) = user_id);
+create policy athlete_profiles_update_own on public.athlete_profiles for update to authenticated using ((select auth.uid()) is not null and (select auth.uid()) = user_id) with check ((select auth.uid()) is not null and (select auth.uid()) = user_id);
+create policy provider_connections_select_own on public.provider_connections for select to authenticated using ((select auth.uid()) is not null and (select auth.uid()) = user_id);
+create policy provider_connections_insert_own on public.provider_connections for insert to authenticated with check ((select auth.uid()) is not null and (select auth.uid()) = user_id);
+create policy provider_connections_update_own on public.provider_connections for update to authenticated using ((select auth.uid()) is not null and (select auth.uid()) = user_id) with check ((select auth.uid()) is not null and (select auth.uid()) = user_id);
+create policy provider_connections_delete_own on public.provider_connections for delete to authenticated using ((select auth.uid()) is not null and (select auth.uid()) = user_id);
+create policy audit_events_select_own on public.audit_events for select to authenticated using ((select auth.uid()) is not null and (select auth.uid()) = user_id);
