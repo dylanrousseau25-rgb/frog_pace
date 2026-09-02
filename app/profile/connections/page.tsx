@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Loader2, RefreshCw, Unplug, Watch } from "lucide-react";
+import { CheckCircle2, History, Loader2, RefreshCw, Unplug, Watch } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type SyncInfo = {
@@ -24,6 +24,7 @@ export default function ConnectionsPage() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [historyBusy, setHistoryBusy] = useState(false);
   const [status, setStatus] = useState("disconnected");
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [activityCount, setActivityCount] = useState(0);
@@ -112,6 +113,29 @@ export default function ConnectionsPage() {
     }
   }
 
+  async function importThreeYears() {
+    setHistoryBusy(true);
+    setError(null);
+    setMessage("Import des 3 dernières années en cours. Les périodes denses sont découpées automatiquement pour ne pas perdre d’activités.");
+    try {
+      const { data, error: backfillError } = await supabase.functions.invoke("coros-backfill", { body: {} });
+      if (backfillError) throw backfillError;
+      if (data?.error) throw new Error(data.error);
+      const added = Number(data?.newlyAdded || 0);
+      const total = Number(data?.totalActivities || 0);
+      setMessage(data?.status === "partial"
+        ? `Historique importé avec quelques avertissements : ${added} nouvelle(s) activité(s), ${total} au total.`
+        : `Historique COROS importé : ${added} nouvelle(s) activité(s), ${total} au total sur Frog Pace.`);
+      await load();
+    } catch (historyError) {
+      setError(historyError instanceof Error ? historyError.message : "Import de l’historique COROS impossible");
+      setMessage(null);
+      await load();
+    } finally {
+      setHistoryBusy(false);
+    }
+  }
+
   async function disconnect() {
     if (!window.confirm("Déconnecter COROS ? Les activités déjà importées resteront dans Frog Pace.")) return;
     setBusy(true);
@@ -131,6 +155,7 @@ export default function ConnectionsPage() {
   }
 
   const connected = status === "connected";
+  const actionBusy = busy || historyBusy;
 
   return <main>
     <div className="frog-kicker">Connexions</div>
@@ -176,16 +201,19 @@ export default function ConnectionsPage() {
         </a>
       ) : (
         <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
-          <button className="frog-button frog-button-primary frog-button-wide" onClick={syncNow} disabled={busy}>
+          <button className="frog-button frog-button-primary frog-button-wide" onClick={syncNow} disabled={actionBusy}>
             {busy ? <Loader2 size={18} className="frog-spin" /> : <RefreshCw size={18} />} Synchroniser maintenant
           </button>
-          <button className="frog-button frog-button-secondary frog-button-wide" onClick={disconnect} disabled={busy}>
+          <button className="frog-button frog-button-secondary frog-button-wide" onClick={importThreeYears} disabled={actionBusy}>
+            {historyBusy ? <Loader2 size={18} className="frog-spin" /> : <History size={18} />} {historyBusy ? "Import des 3 ans…" : "Importer les 3 dernières années"}
+          </button>
+          <button className="frog-button frog-button-secondary frog-button-wide" onClick={disconnect} disabled={actionBusy}>
             <Unplug size={18} /> Déconnecter COROS
           </button>
         </div>
       )}
 
-      <p className="frog-footnote">Déconnecter COROS supprime les jetons d’accès mais ne supprime jamais tes activités déjà importées dans Frog Pace.</p>
+      <p className="frog-footnote">L’import historique est relançable sans doublons. Déconnecter COROS supprime les jetons d’accès mais ne supprime jamais tes activités déjà importées dans Frog Pace.</p>
     </section>
   </main>;
 }
