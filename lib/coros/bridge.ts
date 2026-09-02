@@ -15,7 +15,7 @@ export async function callCorosBridge(action: CorosAction, payload: Record<strin
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !anonKey) throw new Error("Configuration Supabase manquante");
 
-  const response = await fetch(`${supabaseUrl}/functions/v1/coros-bridge`, {
+  const response = await fetch(`${supabaseUrl}/functions/v1/coros-bridge-v2`, {
     method: "POST",
     headers: {
       authorization: `Bearer ${accessToken}`,
