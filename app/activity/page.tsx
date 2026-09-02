@@ -10,6 +10,7 @@ type ActivityRow = {
   distance_m: number | null;
   duration_s: number | null;
   pace_seconds_per_km: number | null;
+  avg_speed_kmh: number | null;
   raw_provider_data: Record<string, unknown> | null;
 };
 
@@ -49,9 +50,13 @@ function formatPace(seconds: number | null) {
   return `${minutes}:${String(rest).padStart(2, "0")}/km`;
 }
 
+function isCycling(type: number | null) {
+  return type != null && type >= 200 && type < 300;
+}
+
 function SportIcon({ type }: { type: number | null }) {
   if (type === 102 || type === 104 || type === 105) return <Mountain size={20} />;
-  if (type != null && type >= 200 && type < 300) return <Bike size={20} />;
+  if (isCycling(type)) return <Bike size={20} />;
   if (type != null && type >= 100 && type < 200) return <Footprints size={20} />;
   return <ActivityIcon size={20} />;
 }
@@ -63,16 +68,16 @@ export default async function ActivityPage() {
 
   const { data } = await supabase
     .from("activities")
-    .select("id,sport,sport_type,started_at,distance_m,duration_s,pace_seconds_per_km,raw_provider_data")
+    .select("id,sport,sport_type,started_at,distance_m,duration_s,pace_seconds_per_km,avg_speed_kmh,raw_provider_data")
     .eq("user_id", auth.user.id)
     .order("started_at", { ascending: false, nullsFirst: false })
-    .limit(50);
+    .limit(500);
   const activities = (data || []) as ActivityRow[];
 
   return <main>
     <div className="frog-kicker">Activité</div>
     <h1 className="frog-page-title">Tes séances réalisées</h1>
-    <p className="frog-page-subtitle">Historique réellement importé depuis tes fournisseurs. Une synchronisation répétée ne crée pas de doublon.</p>
+    <p className="frog-page-subtitle">{activities.length} activité(s) importée(s) depuis tes fournisseurs. Une synchronisation répétée ne crée pas de doublon.</p>
 
     {activities.length === 0 ? (
       <section className="frog-card frog-empty">
@@ -84,16 +89,17 @@ export default async function ActivityPage() {
       <div className="frog-stack">
         {activities.map((activity) => {
           const pace = formatPace(activity.pace_seconds_per_km == null ? null : Number(activity.pace_seconds_per_km));
+          const speed = activity.avg_speed_kmh == null ? null : Number(activity.avg_speed_kmh);
           return <article className="frog-card" key={activity.id}>
             <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
               <span className="frog-provider-icon"><SportIcon type={activity.sport_type} /></span>
               <div style={{ flex: 1 }}>
-                <div className="frog-kicker">{activity.started_at ? new Date(activity.started_at).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }) : "Date indisponible"}</div>
+                <div className="frog-kicker">{activity.started_at ? new Date(activity.started_at).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "Date indisponible"}</div>
                 <h2 className="frog-card-title" style={{ marginTop: 5 }}>{activity.sport || "Activité COROS"}</h2>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 10, color: "var(--frog-muted)", fontSize: 13 }}>
                   <span>{formatDistance(activity)}</span>
                   <span style={{ display: "inline-flex", gap: 5, alignItems: "center" }}><Timer size={14} /> {formatDuration(activity)}</span>
-                  {pace && <span>{pace}</span>}
+                  {isCycling(activity.sport_type) && speed != null ? <span>{speed.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} km/h</span> : pace && <span>{pace}</span>}
                 </div>
               </div>
             </div>
