@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Brain, ChevronRight, Link2, LogOut, UserRound } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function ProfilePage() {
@@ -16,12 +18,30 @@ export default function ProfilePage() {
   return <main>
     <div className="frog-kicker">Profil</div>
     <h1 className="frog-page-title">Ton espace Frog</h1>
-    <p className="frog-page-subtitle">Le prochain lot ajoutera ton profil sportif, tes préférences, tes vigilances et l'écran « Ce que Frog sait de moi ».</p>
+    <p className="frog-page-subtitle">Ton profil, ta mémoire et tes connexions sont séparés pour que tu gardes le contrôle.</p>
 
-    <section className="frog-card">
+    <div className="frog-menu-list">
+      <Link href="/onboarding" className="frog-menu-card">
+        <span className="frog-menu-icon"><UserRound size={20} /></span>
+        <span><strong>Profil sportif</strong><small>Sports, disponibilités, matériel, vigilances et préférences</small></span>
+        <ChevronRight size={18} />
+      </Link>
+      <Link href="/profile/memory" className="frog-menu-card">
+        <span className="frog-menu-icon"><Brain size={20} /></span>
+        <span><strong>Ce que Frog sait de moi</strong><small>Voir, corriger ou supprimer les mémoires du Coach</small></span>
+        <ChevronRight size={18} />
+      </Link>
+      <Link href="/profile/connections" className="frog-menu-card">
+        <span className="frog-menu-icon"><Link2 size={20} /></span>
+        <span><strong>Connexions & appareils</strong><small>COROS maintenant, autres fournisseurs plus tard</small></span>
+        <ChevronRight size={18} />
+      </Link>
+    </div>
+
+    <section className="frog-card" style={{ marginTop: 18 }}>
       <h2 className="frog-card-title">Compte</h2>
-      <p className="frog-card-text">Ton compte est isolé par les règles de sécurité de la base. Tes données métier seront toujours liées à ton utilisateur.</p>
-      <button onClick={signOut} className="frog-button frog-button-secondary frog-button-wide" style={{ marginTop: 18 }}>Se déconnecter</button>
+      <p className="frog-card-text">Tes données sont isolées par utilisateur dans PostgreSQL et protégées par RLS.</p>
+      <button onClick={signOut} className="frog-button frog-button-secondary frog-button-wide" style={{ marginTop: 18 }}><LogOut size={17} /> Se déconnecter</button>
     </section>
   </main>;
 }
