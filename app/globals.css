@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+:root {
+  --frog-bg: #f7f8f5;
+  --frog-surface: #ffffff;
+  --frog-surface-soft: #f0f4ee;
+  --frog-border: #e5e9e2;
+  --frog-text: #171a18;
+  --frog-muted: #6e766f;
+  --frog-green: #62d84e;
+  --frog-green-dark: #2f9f35;
+  --frog-green-soft: #e8f8e4;
+  --frog-warning: #f4a43c;
+  --frog-danger: #dc5a5a;
+  --frog-info: #5b7ee5;
+  --frog-radius: 24px;
+  --frog-shadow: 0 12px 32px rgba(30, 43, 32, 0.06);
+}
+
+* { box-sizing: border-box; }
+html { background: var(--frog-bg); }
+body {
+  margin: 0;
+  background: var(--frog-bg);
+  color: var(--frog-text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, textarea, select { font: inherit; }
+a { color: inherit; text-decoration: none; }
+
+.frog-shell {
+  width: min(100%, 560px);
+  min-height: 100dvh;
+  margin: 0 auto;
+  background: var(--frog-bg);
+  padding-bottom: 98px;
+}
+
+.frog-content { padding: 18px 18px 28px; }
+.frog-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding: 18px 18px 4px; }
+.frog-brand { display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:-0.03em; font-size:20px; }
+.frog-logo { width:38px; height:38px; border-radius:14px; display:grid; place-items:center; background:var(--frog-green); box-shadow: inset 0 -3px 0 rgba(0,0,0,.08); font-size:22px; }
+.frog-avatar { width:38px; height:38px; border-radius:50%; border:1px solid var(--frog-border); background:var(--frog-surface); display:grid; place-items:center; color:var(--frog-muted); }
+
+.frog-page-title { margin: 18px 0 4px; font-size:30px; line-height:1.05; letter-spacing:-0.045em; font-weight:850; }
+.frog-page-subtitle { margin:0 0 20px; color:var(--frog-muted); line-height:1.5; }
+
+.frog-card { background:var(--frog-surface); border:1px solid var(--frog-border); border-radius:var(--frog-radius); padding:18px; box-shadow:var(--frog-shadow); }
+.frog-card + .frog-card { margin-top:12px; }
+.frog-card-soft { background:var(--frog-green-soft); border-color:#d8efd3; }
+.frog-card-title { margin:0; font-size:17px; font-weight:800; letter-spacing:-0.02em; }
+.frog-card-text { margin:8px 0 0; color:var(--frog-muted); line-height:1.5; font-size:14px; }
+.frog-kicker { color:var(--frog-green-dark); font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
+
+.frog-button { border:0; border-radius:16px; min-height:50px; padding:0 18px; display:inline-flex; align-items:center; justify-content:center; gap:8px; font-weight:800; cursor:pointer; transition:transform .15s ease, opacity .15s ease; }
+.frog-button:active { transform:scale(.98); }
+.frog-button:disabled { opacity:.55; cursor:not-allowed; }
+.frog-button-primary { background:var(--frog-green); color:#10220d; }
+.frog-button-secondary { background:var(--frog-surface-soft); color:var(--frog-text); border:1px solid var(--frog-border); }
+.frog-button-wide { width:100%; }
+
+.frog-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.frog-metric { background:var(--frog-surface); border:1px solid var(--frog-border); border-radius:20px; padding:14px; }
+.frog-metric-label { color:var(--frog-muted); font-size:12px; font-weight:650; }
+.frog-metric-value { font-size:21px; font-weight:850; letter-spacing:-.03em; margin-top:4px; }
+
+.frog-empty { min-height:260px; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; }
+.frog-empty-icon { width:52px; height:52px; border-radius:18px; background:var(--frog-green-soft); display:grid; place-items:center; font-size:25px; margin-bottom:16px; }
+
+.frog-bottom-nav { position:fixed; z-index:50; left:50%; bottom:0; transform:translateX(-50%); width:min(100%,560px); height:82px; background:rgba(255,255,255,.94); backdrop-filter:blur(18px); border-top:1px solid var(--frog-border); display:grid; grid-template-columns:repeat(5,1fr); padding:8px 6px max(8px, env(safe-area-inset-bottom)); }
+.frog-nav-item { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#8b928b; font-size:10px; font-weight:700; }
+.frog-nav-item[data-active="true"] { color:var(--frog-green-dark); }
+.frog-nav-dot { width:5px; height:5px; border-radius:50%; background:transparent; }
+.frog-nav-item[data-active="true"] .frog-nav-dot { background:var(--frog-green); }
+
+.frog-auth { width:min(100%,460px); min-height:100dvh; margin:0 auto; padding:32px 20px; display:flex; flex-direction:column; justify-content:center; }
+.frog-auth-logo { width:68px; height:68px; border-radius:24px; display:grid; place-items:center; margin-bottom:20px; background:var(--frog-green); font-size:38px; }
+.frog-auth h1 { font-size:36px; letter-spacing:-.05em; margin:0 0 8px; }
+.frog-auth p { color:var(--frog-muted); line-height:1.5; }
+.frog-form { margin-top:26px; display:grid; gap:12px; }
+.frog-field { display:grid; gap:7px; }
+.frog-field label { font-size:13px; font-weight:750; }
+.frog-input { width:100%; min-height:52px; border:1px solid var(--frog-border); border-radius:16px; background:var(--frog-surface); padding:0 14px; outline:none; }
+.frog-input:focus { border-color:var(--frog-green-dark); box-shadow:0 0 0 4px var(--frog-green-soft); }
+.frog-error { background:#fff0f0; color:#9a3030; border:1px solid #f4cccc; padding:12px 14px; border-radius:14px; font-size:13px; }
+.frog-success { background:var(--frog-green-soft); color:#266e28; border:1px solid #cdeac8; padding:12px 14px; border-radius:14px; font-size:13px; }
+.frog-segment { display:grid; grid-template-columns:1fr 1fr; padding:4px; border-radius:16px; background:var(--frog-surface-soft); margin-bottom:18px; }
+.frog-segment button { border:0; background:transparent; min-height:40px; border-radius:12px; font-weight:800; color:var(--frog-muted); }
+.frog-segment button[data-active="true"] { background:var(--frog-surface); color:var(--frog-text); box-shadow:0 3px 10px rgba(0,0,0,.06); }
+
+@media (min-width: 700px) {
+  body { padding:18px 0; }
+  .frog-shell, .frog-auth { min-height:calc(100dvh - 36px); border-radius:32px; overflow:hidden; box-shadow:0 22px 70px rgba(24,34,27,.12); }
+  .frog-bottom-nav { bottom:18px; border-radius:0 0 32px 32px; }
+}
