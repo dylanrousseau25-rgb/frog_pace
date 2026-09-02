@@ -12,6 +12,14 @@ type SyncInfo = {
   error_message: string | null;
 };
 
+function syncLabel(status?: string | null) {
+  if (status === "success") return "Réussie";
+  if (status === "partial") return "Partielle";
+  if (status === "error") return "Erreur";
+  if (status === "running") return "En cours";
+  return "—";
+}
+
 export default function ConnectionsPage() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [loading, setLoading] = useState(true);
@@ -150,9 +158,15 @@ export default function ConnectionsPage() {
       )}
 
       {connected && !loading && (
-        <div className="frog-provider-stats">
-          <div><strong>{activityCount}</strong><span>activité(s) importée(s)</span></div>
-          <div><strong>{latestSync?.status || "—"}</strong><span>dernière synchro</span></div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 14 }}>
+          <div style={{ border: "1px solid var(--frog-border)", borderRadius: 16, padding: 12, background: "var(--frog-surface-soft)", display: "grid", gap: 3 }}>
+            <strong style={{ fontSize: 20, lineHeight: 1 }}>{activityCount}</strong>
+            <span style={{ color: "var(--frog-muted)", fontSize: 12 }}>activité(s) importée(s)</span>
+          </div>
+          <div style={{ border: "1px solid var(--frog-border)", borderRadius: 16, padding: 12, background: "var(--frog-surface-soft)", display: "grid", gap: 3 }}>
+            <strong style={{ fontSize: 16, lineHeight: 1.2 }}>{syncLabel(latestSync?.status)}</strong>
+            <span style={{ color: "var(--frog-muted)", fontSize: 12 }}>dernière synchro</span>
+          </div>
         </div>
       )}
 
@@ -161,7 +175,7 @@ export default function ConnectionsPage() {
           <Watch size={18} /> Connecter mon compte COROS
         </a>
       ) : (
-        <div className="frog-provider-actions">
+        <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
           <button className="frog-button frog-button-primary frog-button-wide" onClick={syncNow} disabled={busy}>
             {busy ? <Loader2 size={18} className="frog-spin" /> : <RefreshCw size={18} />} Synchroniser maintenant
           </button>
