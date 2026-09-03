@@ -83,7 +83,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   if (matchRow) {
     const [{ data: planned }, { data: feedbackRow }, { data: analysisRow }] = await Promise.all([
       supabase.from("planned_workouts").select("id,scheduled_date,title,sport,workout_type,duration_s,distance_m").eq("id", matchRow.planned_workout_id).eq("user_id", auth.user.id).maybeSingle(),
-      supabase.from("workout_feedback").select("perceived_effort,feeling,completed_as_planned,pain_or_discomfort,notes").eq("match_id", matchRow.id).eq("user_id", auth.user.id).maybeSingle(),
+      supabase.from("workout_feedback").select("perceived_effort,feeling,completed_as_planned,pain_or_discomfort,health_status,notes").eq("match_id", matchRow.id).eq("user_id", auth.user.id).maybeSingle(),
       supabase.from("workout_analyses").select("adherence_score,outcome,summary,recommendations").eq("match_id", matchRow.id).eq("user_id", auth.user.id).maybeSingle(),
     ]);
     plannedWorkout = planned;
@@ -155,6 +155,6 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
       />
     </div>
 
-    <p className="frog-footnote">Le Lot 7 analyse la séance terminée et ton ressenti. Il ne modifie pas encore les séances suivantes : cette décision appartient au Lot 8.</p>
+    <p className="frog-footnote">Frog analyse la séance terminée et ton ressenti, puis actualise automatiquement le bilan hebdomadaire. Toute adaptation future reste soumise à ta validation.</p>
   </main>;
 }
