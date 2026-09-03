@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowRight, CalendarDays, CheckCircle2, Loader2, LockKeyhole, RefreshCw, Target, Trash2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import WeeklyReviewCard from "./weekly-review-card";
 
 type Goal = {
   id: string;
@@ -265,9 +266,9 @@ export default function PlanPage() {
   const workoutCount = workouts.length;
 
   return <main>
-    <div className="frog-kicker">Lot 4 · Plan</div>
+    <div className="frog-kicker">Plan · adaptation continue</div>
     <h1 className="frog-page-title">Ta préparation</h1>
-    <p className="frog-page-subtitle">Un plan versionné, construit depuis ton objectif validé et les contraintes de ton profil. Les adaptations automatiques après séance arriveront au Lot 8.</p>
+    <p className="frog-page-subtitle">Un plan versionné qui peut maintenant être réévalué chaque semaine à partir des séances réalisées, du feedback et des derniers signaux COROS.</p>
 
     {message && <div className="frog-success" style={{ marginBottom: 12 }}>{message}</div>}
     {error && <div className="frog-error" style={{ marginBottom: 12 }}>{error}</div>}
@@ -324,6 +325,8 @@ export default function PlanPage() {
           </div>
         </section>
 
+        <WeeklyReviewCard planId={plan.id} onPlanChanged={load} />
+
         {weeks.map((week) => {
           const weekWorkouts = workouts.filter((workout) => workout.plan_week_id === week.id);
           return <section className="frog-card" key={week.id}>
@@ -368,6 +371,6 @@ export default function PlanPage() {
       </>}
     </>}
 
-    <p className="frog-footnote">Le Workout Builder du Lot 5 fournit maintenant le détail des séances. Le Lot 6 utilisera les séances marquées compatibles pour l’export montre ; l’adaptation automatique selon les séances réalisées arrive au Lot 8.</p>
+    <p className="frog-footnote">Frog conserve les dates du plan en V1. Les adaptations du Lot 8 agissent uniquement sur la charge ou le contenu des séances futures et restent entièrement traçables.</p>
   </main>;
 }
