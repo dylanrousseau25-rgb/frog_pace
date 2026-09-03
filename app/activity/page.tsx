@@ -1,4 +1,5 @@
-import { Activity as ActivityIcon, Bike, Footprints, Mountain, Timer } from "lucide-react";
+import Link from "next/link";
+import { Activity as ActivityIcon, ArrowRight, Bike, CheckCircle2, Footprints, Mountain, Timer } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -13,6 +14,8 @@ type ActivityRow = {
   avg_speed_kmh: number | null;
   raw_provider_data: Record<string, unknown> | null;
 };
+
+type MatchRow = { id: string; activity_id: string; status: string };
 
 function numeric(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -74,10 +77,21 @@ export default async function ActivityPage() {
     .limit(500);
   const activities = (data || []) as ActivityRow[];
 
+  const activityIds = activities.map((activity) => activity.id);
+  const { data: matchRows } = activityIds.length
+    ? await supabase.from("workout_matches").select("id,activity_id,status").eq("user_id", auth.user.id).in("activity_id", activityIds)
+    : { data: [] };
+  const matches = new Map((matchRows || []).map((row) => [row.activity_id, row as MatchRow]));
+  const confirmedMatchIds = (matchRows || []).filter((row) => row.status === "confirmed").map((row) => row.id);
+  const { data: feedbackRows } = confirmedMatchIds.length
+    ? await supabase.from("workout_feedback").select("match_id").eq("user_id", auth.user.id).in("match_id", confirmedMatchIds)
+    : { data: [] };
+  const feedbackMatchIds = new Set((feedbackRows || []).map((row) => row.match_id));
+
   return <main>
     <div className="frog-kicker">Activité</div>
     <h1 className="frog-page-title">Tes séances réalisées</h1>
-    <p className="frog-page-subtitle">{activities.length} activité(s) importée(s) depuis tes fournisseurs. Une synchronisation répétée ne crée pas de doublon.</p>
+    <p className="frog-page-subtitle">{activities.length} activité(s) importée(s). Frog peut maintenant comparer une activité à la séance prévue et recueillir ton ressenti.</p>
 
     {activities.length === 0 ? (
       <section className="frog-card frog-empty">
@@ -90,6 +104,8 @@ export default async function ActivityPage() {
         {activities.map((activity) => {
           const pace = formatPace(activity.pace_seconds_per_km == null ? null : Number(activity.pace_seconds_per_km));
           const speed = activity.avg_speed_kmh == null ? null : Number(activity.avg_speed_kmh);
+          const match = matches.get(activity.id);
+          const hasFeedback = match?.status === "confirmed" && feedbackMatchIds.has(match.id);
           return <article className="frog-card" key={activity.id}>
             <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
               <span className="frog-provider-icon"><SportIcon type={activity.sport_type} /></span>
@@ -101,6 +117,12 @@ export default async function ActivityPage() {
                   <span style={{ display: "inline-flex", gap: 5, alignItems: "center" }}><Timer size={14} /> {formatDuration(activity)}</span>
                   {isCycling(activity.sport_type) && speed != null ? <span>{speed.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} km/h</span> : pace && <span>{pace}</span>}
                 </div>
+                {match && <div className="frog-status-line" data-connected={match.status === "confirmed"} style={{ marginTop: 10 }}>
+                  {match.status === "suggested" ? "Lien au plan à confirmer" : hasFeedback ? <><CheckCircle2 size={15} /> Analyse post-séance disponible</> : "Plan lié · feedback à compléter"}
+                </div>}
+                <Link href={`/activity/${activity.id}`} className="frog-button frog-button-secondary" style={{ marginTop: 12 }}>
+                  {match?.status === "confirmed" ? (hasFeedback ? "Voir l’analyse" : "Donner mon feedback") : "Ouvrir l’activité"} <ArrowRight size={17} />
+                </Link>
               </div>
             </div>
           </article>;
