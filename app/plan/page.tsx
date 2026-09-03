@@ -56,6 +56,8 @@ type Workout = {
   distance_m: number | string | null;
   intensity: string | null;
   structured_steps: Array<Record<string, unknown>> | null;
+  workout_schema_version: string;
+  device_export_ready: boolean;
   status: string;
 };
 
@@ -127,6 +129,9 @@ function stepLabel(step: Record<string, unknown>) {
   if (kind === "steady") return `Continu · ${formatDuration(Number(step.duration_s)) || formatDistance(step.distance_m as number | string) || "—"} · facile`;
   if (kind === "strength") return `Renforcement · ${formatDuration(Number(step.duration_s)) || "—"}`;
   if (kind === "mobility") return `Mobilité · ${formatDuration(Number(step.duration_s)) || "—"}`;
+  if (kind === "activation") return `Activation · ${formatDuration(Number(step.duration_s)) || "—"}`;
+  if (kind === "circuit") return `${Number(step.rounds) || 1} tours · circuit de renforcement`;
+  if (kind === "exercise") return String(step.name || "Exercice de mobilité");
   if (kind === "repeat") {
     const repetitions = Number(step.repetitions) || 1;
     const work = formatDuration(Number(step.work_duration_s));
@@ -211,7 +216,7 @@ export default function PlanPage() {
     if (typedPlan) {
       const [{ data: weekRows }, { data: workoutRows }] = await Promise.all([
         supabase.from("training_plan_weeks").select("id,week_index,starts_on,ends_on,phase,target_sessions,load_scale,notes").eq("plan_id", typedPlan.id).order("week_index"),
-        supabase.from("planned_workouts").select("id,plan_week_id,scheduled_date,sport,workout_type,title,description,duration_s,distance_m,intensity,structured_steps,status").eq("plan_id", typedPlan.id).order("scheduled_date"),
+        supabase.from("planned_workouts").select("id,plan_week_id,scheduled_date,sport,workout_type,title,description,duration_s,distance_m,intensity,structured_steps,workout_schema_version,device_export_ready,status").eq("plan_id", typedPlan.id).order("scheduled_date"),
       ]);
       setWeeks((weekRows || []) as PlanWeek[]);
       setWorkouts((workoutRows || []) as Workout[]);
@@ -348,8 +353,9 @@ export default function PlanPage() {
                   </div>
                   <div className="frog-card-text" style={{ marginTop: 5 }}>{meta}</div>
                   {workout.description && <p className="frog-card-text" style={{ marginBottom: 0 }}>{workout.description}</p>}
+                  <Link href={`/workouts/${workout.id}`} className="frog-button frog-button-secondary frog-button-wide" style={{ marginTop: 10 }}>Ouvrir la fiche détaillée <ArrowRight size={16} /></Link>
                   {steps.length > 0 && <details style={{ marginTop: 10 }}>
-                    <summary className="frog-card-text" style={{ cursor: "pointer", fontWeight: 700 }}>Voir la structure de la séance</summary>
+                    <summary className="frog-card-text" style={{ cursor: "pointer", fontWeight: 700 }}>Aperçu des blocs</summary>
                     <div style={{ display: "grid", gap: 5, marginTop: 8 }}>
                       {steps.map((step, index) => <div key={index} className="frog-card-text">{index + 1}. {stepLabel(step)}</div>)}
                     </div>
@@ -362,6 +368,6 @@ export default function PlanPage() {
       </>}
     </>}
 
-    <p className="frog-footnote">Le Lot 4 crée la structure initiale. Le détail visuel des exercices et l’export montre arrivent dans les Lots 5 et 6 ; l’adaptation automatique selon les séances réalisées arrive au Lot 8.</p>
+    <p className="frog-footnote">Le Workout Builder du Lot 5 fournit maintenant le détail des séances. Le Lot 6 utilisera les séances marquées compatibles pour l’export montre ; l’adaptation automatique selon les séances réalisées arrive au Lot 8.</p>
   </main>;
 }
