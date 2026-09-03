@@ -94,6 +94,7 @@ function AssessmentPanel({ assessment }: { assessment?: Assessment }) {
   const Icon = info.icon;
   const metrics = assessment.metrics || {};
   const reasons = Array.isArray(assessment.reasons) ? assessment.reasons : [];
+  const hasAnnualHistory = assessment.model_version.includes("annual") || metrics.activities_365d != null;
 
   return <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
@@ -110,17 +111,49 @@ function AssessmentPanel({ assessment }: { assessment?: Assessment }) {
       </div>
       <div style={{ border: "1px solid var(--frog-border)", borderRadius: 14, padding: 10 }}>
         <strong>{String(metrics.frequency_per_week_12w ?? "—")}</strong>
-        <div className="frog-card-text">séance(s) / sem.</div>
+        <div className="frog-card-text">séance(s) / sem. · 12 sem.</div>
       </div>
       <div style={{ border: "1px solid var(--frog-border)", borderRadius: 14, padding: 10 }}>
         <strong>{km(metrics.longest_recent_distance_m)}</strong>
-        <div className="frog-card-text">plus longue récente</div>
+        <div className="frog-card-text">plus longue · 12 sem.</div>
       </div>
       <div style={{ border: "1px solid var(--frog-border)", borderRadius: 14, padding: 10 }}>
         <strong>{km(metrics.weekly_distance_m_4w)}</strong>
-        <div className="frog-card-text">moyenne / semaine</div>
+        <div className="frog-card-text">moyenne / semaine · 4 sem.</div>
       </div>
     </div>
+
+    {hasAnnualHistory && <div>
+      <div className="frog-kicker">Historique 12 mois</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+        <div style={{ border: "1px solid var(--frog-border)", borderRadius: 14, padding: 10 }}>
+          <strong>{String(metrics.activities_365d ?? "—")}</strong>
+          <div className="frog-card-text">séances pertinentes</div>
+        </div>
+        <div style={{ border: "1px solid var(--frog-border)", borderRadius: 14, padding: 10 }}>
+          <strong>{String(metrics.active_weeks_365d ?? "—")}</strong>
+          <div className="frog-card-text">semaines actives</div>
+        </div>
+        <div style={{ border: "1px solid var(--frog-border)", borderRadius: 14, padding: 10 }}>
+          <strong>{km(metrics.longest_365d_distance_m)}</strong>
+          <div className="frog-card-text">plus longue sortie</div>
+        </div>
+        <div style={{ border: "1px solid var(--frog-border)", borderRadius: 14, padding: 10 }}>
+          <strong>{km(metrics.max_weekly_distance_365d_m)}</strong>
+          <div className="frog-card-text">plus grosse semaine</div>
+        </div>
+        <div style={{ border: "1px solid var(--frog-border)", borderRadius: 14, padding: 10 }}>
+          <strong>{km(metrics.distance_365d_m)}</strong>
+          <div className="frog-card-text">volume total</div>
+        </div>
+        <div style={{ border: "1px solid var(--frog-border)", borderRadius: 14, padding: 10 }}>
+          <strong>{String(metrics.goal_like_sessions_365d ?? "—")}</strong>
+          <div className="frog-card-text">séance(s) ≥ 80 % cible</div>
+        </div>
+      </div>
+      <p className="frog-card-text" style={{ margin: "8px 0 0" }}>Les données annuelles donnent du contexte et peuvent apporter un bonus modéré. La préparation récente reste prioritaire.</p>
+    </div>}
+
     <div>
       <div className="frog-kicker">Pourquoi</div>
       <div style={{ display: "grid", gap: 7, marginTop: 8 }}>
@@ -330,7 +363,7 @@ export default function GoalsPage() {
   return <main>
     <div className="frog-kicker">Lot 3 · Goal Engine</div>
     <h1 className="frog-page-title">Tes objectifs</h1>
-    <p className="frog-page-subtitle">Frog enregistre ton objectif, confronte sa distance et son calendrier à ton historique réel, puis explique son verdict avant de générer le moindre plan.</p>
+    <p className="frog-page-subtitle">Frog confronte ton objectif à ta préparation récente et à 12 mois d’historique réel. Les données récentes restent prioritaires, l’année complète sert à reconnaître les capacités déjà démontrées.</p>
 
     {message && <div className="frog-success" style={{ marginBottom: 12 }}>{message}</div>}
     {error && <div className="frog-error" style={{ marginBottom: 12 }}>{error}</div>}
