@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import Link from "next/link";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -13,6 +14,12 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("account") === "deleted") {
+      setMessage("Ton compte Frog Pace et les données Frog associées ont été supprimés.");
+    }
+  }, []);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -64,7 +71,7 @@ export default function LoginPage() {
         {mode === "signup" && (
           <div className="frog-field">
             <label htmlFor="name">Prénom</label>
-            <input id="name" className="frog-input" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Dylan" required />
+            <input id="name" className="frog-input" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Ton prénom" required />
           </div>
         )}
         <div className="frog-field">
@@ -82,6 +89,11 @@ export default function LoginPage() {
         <button className="frog-button frog-button-primary frog-button-wide" disabled={loading}>
           {loading ? "Un instant…" : mode === "login" ? "Se connecter" : "Créer mon compte"}
         </button>
+
+        {mode === "signup" && <p className="frog-footnote" style={{ textAlign: "center", marginTop: 10 }}>
+          En créant un compte, tu reconnais avoir lu les <Link href="/legal/terms">conditions d’utilisation</Link> et la <Link href="/legal/privacy">politique de confidentialité</Link>.
+        </p>}
+        {mode === "login" && <p className="frog-footnote" style={{ textAlign: "center", marginTop: 10 }}><Link href="/legal">Confidentialité & informations légales</Link></p>}
       </form>
     </main>
   );
