@@ -11,6 +11,7 @@ type CoachContext = Record<string, unknown>;
 
 function obj(value: unknown) { return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}; }
 function number(value: unknown) { const x = Number(value); return Number.isFinite(x) ? x : null; }
+function string(value: unknown) { return typeof value === "string" ? value : null; }
 
 function RichText({ value }: { value: string }) {
   const parts = value.split(/(\*\*[^*]+\*\*)/g);
@@ -96,6 +97,8 @@ export default function CoachClient() {
   const nextWorkout = obj(context.nextWorkout);
   const recovery = number(fitness.recovery);
   const readiness = number(review.readiness_score ?? review.readinessScore);
+  const reviewDecision = string(review.decision);
+  const nextWorkoutTitle = string(nextWorkout.title);
 
   if (loading) return <div className="frog-centered"><Loader2 className="frog-spin" /> Chargement du Coach…</div>;
 
@@ -104,14 +107,14 @@ export default function CoachClient() {
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start" }}>
         <div>
           <div className="frog-kicker">Contexte Frog en direct</div>
-          <h2 className="frog-card-title" style={{ marginTop: 6 }}>{nextWorkout.title ? String(nextWorkout.title) : "Plan chargé"}</h2>
+          <h2 className="frog-card-title" style={{ marginTop: 6 }}>{nextWorkoutTitle || "Plan chargé"}</h2>
         </div>
         <Bot size={23} />
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
         {recovery != null && <span className="frog-status-line" data-connected>Récupération {Math.round(recovery)}%</span>}
         {readiness != null && <span className="frog-status-line" data-connected>Disponibilité {Math.round(readiness)}/100</span>}
-        {review.decision && <span className="frog-status-line">Bilan : {review.decision === "maintain" ? "maintien" : String(review.decision)}</span>}
+        {reviewDecision && <span className="frog-status-line">Bilan : {reviewDecision === "maintain" ? "maintien" : reviewDecision}</span>}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 14 }}>
         <Link href="/progress" className="frog-button frog-button-secondary">Progrès <ArrowRight size={16} /></Link>
