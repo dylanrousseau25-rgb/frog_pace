@@ -1,14 +1,15 @@
 import { MessageCircle } from "lucide-react";
+import CoachClient from "./coach-client";
 
 export default function CoachPage() {
   return <main>
-    <div className="frog-kicker">Coach</div>
+    <div className="frog-kicker">Lot 9 · Coach</div>
     <h1 className="frog-page-title">Parle à Frog</h1>
-    <p className="frog-page-subtitle">Le Coach utilisera ton profil, tes objectifs, ton plan, tes activités et sa mémoire pour te répondre avec du contexte.</p>
-    <section className="frog-card frog-card-soft">
-      <div className="frog-empty-icon"><MessageCircle size={24} /></div>
-      <h2 className="frog-card-title">Le contexte avant la conversation</h2>
-      <p className="frog-card-text">La mémoire et le moteur de coaching seront construits avant d'activer le chat. Ainsi Frog expliquera les vraies décisions du système au lieu d'inventer une justification.</p>
+    <p className="frog-page-subtitle">Un Coach contextuel qui s’appuie sur les données réelles de ton compte avant de répondre.</p>
+    <CoachClient />
+    <section className="frog-card" style={{ marginTop: 12 }}>
+      <div style={{ display: "flex", gap: 10, alignItems: "center" }}><MessageCircle size={20} /><h2 className="frog-card-title">Pourquoi les réponses restent traçables</h2></div>
+      <p className="frog-card-text">Chaque réponse du Coach est enregistrée avec le snapshot de contexte utilisé. Frog peut donc expliquer une décision à partir du plan, de COROS, des bilans et des analyses au lieu d’inventer une justification après coup.</p>
     </section>
   </main>;
 }
