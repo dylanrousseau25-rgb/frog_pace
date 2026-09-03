@@ -103,7 +103,7 @@ export default async function TodayPage() {
   const loadRatio = snapshot?.load_ratio == null ? null : Number(snapshot.load_ratio);
   const vo2max = snapshot?.vo2max == null ? null : Number(snapshot.vo2max);
   const target = goal?.target_duration_s ? formatDuration(Number(goal.target_duration_s)) : null;
-  const accepted = Boolean(goal?.accepted_assessment_id);
+  const acceptedLatest = Boolean(goal?.accepted_assessment_id && assessment?.id === goal.accepted_assessment_id);
 
   return (
     <main>
@@ -157,11 +157,13 @@ export default async function TodayPage() {
         <p className="frog-card-text">
           {(Number(goal.distance_m) / 1000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} km · {new Date(`${goal.event_date}T12:00:00`).toLocaleDateString("fr-FR")} {target ? `· cible ${target}` : ""}
         </p>
-        <div className="frog-status-line" data-connected={assessment?.verdict === "feasible"} style={{ marginTop: 12 }}>
-          {verdictLabel(assessment?.verdict)}{assessment ? ` · ${assessment.score}/100` : ""}{accepted ? " · validé" : " · à valider"}
+        <div className="frog-status-line" data-connected={assessment?.verdict === "feasible" && acceptedLatest} style={{ marginTop: 12 }}>
+          {verdictLabel(assessment?.verdict)}{assessment ? ` · ${assessment.score}/100` : ""}{acceptedLatest ? " · validé" : " · nouvelle analyse à valider"}
         </div>
         {assessment?.summary && <p className="frog-card-text">{assessment.summary}</p>}
-        <Link href="/goals" className="frog-button frog-button-primary" style={{ marginTop: 14 }}>Voir le Goal Engine <ArrowRight size={18} /></Link>
+        <Link href={acceptedLatest ? "/goals" : "/goals/validate"} className="frog-button frog-button-primary" style={{ marginTop: 14 }}>
+          {acceptedLatest ? "Voir le Goal Engine" : "Valider la nouvelle analyse"} <ArrowRight size={18} />
+        </Link>
       </section> : <section className="frog-card frog-empty">
         <div className="frog-empty-icon">🎯</div>
         <h2 className="frog-card-title">Aucun objectif actif</h2>
