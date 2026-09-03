@@ -23,11 +23,14 @@ type Match = {
   confidence: number | string;
 };
 
+type HealthStatus = "normal" | "fatigued" | "ill";
+
 type Feedback = {
   perceived_effort: number;
   feeling: "very_easy" | "easy" | "as_expected" | "hard" | "very_hard";
   completed_as_planned: boolean;
   pain_or_discomfort: boolean;
+  health_status: HealthStatus;
   notes: string | null;
 } | null;
 
@@ -86,6 +89,7 @@ export default function ActivityReview({
   const [feeling, setFeeling] = useState<NonNullable<Feedback>["feeling"]>(feedback?.feeling ?? "as_expected");
   const [completed, setCompleted] = useState(feedback?.completed_as_planned ?? true);
   const [discomfort, setDiscomfort] = useState(feedback?.pain_or_discomfort ?? false);
+  const [healthStatus, setHealthStatus] = useState<HealthStatus>(feedback?.health_status ?? "normal");
   const [notes, setNotes] = useState(feedback?.notes ?? "");
 
   async function confirm(plannedWorkoutId: string) {
@@ -129,6 +133,7 @@ export default function ActivityReview({
       feeling,
       completed_as_planned: completed,
       pain_or_discomfort: discomfort,
+      health_status: healthStatus,
       notes: notes.trim() || null,
       updated_at: new Date().toISOString(),
     }, { onConflict: "match_id" });
@@ -176,7 +181,7 @@ export default function ActivityReview({
     {match?.status === "confirmed" && plannedWorkout && <section className="frog-card">
       <div className="frog-kicker">Feedback post-séance</div>
       <h2 className="frog-card-title" style={{ marginTop: 7 }}>Comment s’est passée la séance ?</h2>
-      <p className="frog-card-text">Ce feedback complète les données COROS. Il n’adapte pas encore automatiquement le plan.</p>
+      <p className="frog-card-text">Ton feedback complète COROS. L’analyse et le bilan hebdomadaire sont recalculés automatiquement après validation.</p>
 
       <label className="frog-card-text" style={{ display: "grid", gap: 6, marginTop: 14 }}>
         <strong>Effort perçu : {rpe}/10</strong>
@@ -194,6 +199,16 @@ export default function ActivityReview({
         </select>
       </label>
 
+      <label className="frog-card-text" style={{ display: "grid", gap: 6, marginTop: 14 }}>
+        <strong>État général</strong>
+        <select value={healthStatus} onChange={(event) => setHealthStatus(event.target.value as HealthStatus)} className="frog-input">
+          <option value="normal">Normal</option>
+          <option value="fatigued">Fatigue générale inhabituelle</option>
+          <option value="ill">Malade / symptômes en cours</option>
+        </select>
+        <small>Ce signal est distinct d’une douleur ou gêne musculosquelettique.</small>
+      </label>
+
       <label className="frog-card-text" style={{ display: "flex", gap: 9, alignItems: "center", marginTop: 14 }}>
         <input type="checkbox" checked={completed} onChange={(event) => setCompleted(event.target.checked)} />
         J’ai réalisé la séance globalement comme prévu
@@ -206,7 +221,7 @@ export default function ActivityReview({
 
       <label className="frog-card-text" style={{ display: "grid", gap: 6, marginTop: 14 }}>
         <strong>Commentaire facultatif</strong>
-        <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={4} className="frog-input" placeholder="Terrain, sensations, météo, raison d’un écart…" />
+        <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={4} className="frog-input" placeholder="Terrain, sensations, météo, contexte particulier…" />
       </label>
 
       <button className="frog-button frog-button-primary frog-button-wide" style={{ marginTop: 14 }} disabled={busy} onClick={saveFeedback}>
