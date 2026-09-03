@@ -22,7 +22,17 @@ export async function POST() {
       };
     }
 
-    return NextResponse.json({ ...result, detailEnrichment });
+    let workoutMatching: unknown = null;
+    try {
+      const { data, error } = await supabase.rpc("refresh_workout_matches");
+      workoutMatching = error ? { error: error.message } : data;
+    } catch (matchError) {
+      workoutMatching = {
+        error: matchError instanceof Error ? matchError.message : "Rapprochement activité/plan impossible"
+      };
+    }
+
+    return NextResponse.json({ ...result, detailEnrichment, workoutMatching });
   } catch (error) {
     return NextResponse.json({
       error: error instanceof Error ? error.message : "Synchronisation COROS impossible"
