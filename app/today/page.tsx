@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight, HeartPulse, MoonStar, Gauge, Sparkles, Target } from "lucide-react";
+import { ArrowRight, CalendarCheck2, Clock3, Gauge, HeartPulse, MoonStar, Route, Sparkles, Target } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function normalizeKey(value: string) {
@@ -35,10 +35,26 @@ function findNumber(root: unknown, candidateKeys: string[]) {
 
 function formatDuration(seconds: number | null) {
   if (!seconds) return null;
+  if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
   const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const remaining = Math.floor(seconds % 60);
-  return `${hours}:${String(minutes).padStart(2, "0")}:${String(remaining).padStart(2, "0")}`;
+  const minutes = Math.round((seconds % 3600) / 60);
+  return `${hours} h${minutes ? ` ${String(minutes).padStart(2, "0")}` : ""}`;
+}
+
+function formatDistance(value: number | string | null) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return null;
+  return `${(numeric / 1000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} km`;
+}
+
+function sportLabel(sport?: string | null) {
+  if (sport === "running") return "Course";
+  if (sport === "trail") return "Trail";
+  if (sport === "road_cycling") return "Vélo route";
+  if (sport === "gravel") return "Gravel";
+  if (sport === "strength") return "Renforcement";
+  if (sport === "mobility") return "Mobilité";
+  return sport || "Séance";
 }
 
 function verdictLabel(verdict?: string | null) {
@@ -95,6 +111,30 @@ export default async function TodayPage() {
         .maybeSingle()
     : { data: null };
 
+  const { data: activePlan } = await supabase
+    .from("training_plans")
+    .select("id")
+    .eq("user_id", auth.user.id)
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const { data: nextWorkout } = activePlan
+    ? await supabase
+        .from("planned_workouts")
+        .select("id,scheduled_date,sport,workout_type,title,description,duration_s,distance_m,intensity,device_export_ready")
+        .eq("plan_id", activePlan.id)
+        .eq("user_id", auth.user.id)
+        .eq("status", "planned")
+        .gte("scheduled_date", today)
+        .order("scheduled_date", { ascending: true })
+        .order("sort_order", { ascending: true })
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
+
   const firstName = profile.display_name?.trim() || "athlète";
   const connected = connection?.status === "connected";
   const recovery = snapshot?.recovery == null ? null : Number(snapshot.recovery);
@@ -104,12 +144,14 @@ export default async function TodayPage() {
   const vo2max = snapshot?.vo2max == null ? null : Number(snapshot.vo2max);
   const target = goal?.target_duration_s ? formatDuration(Number(goal.target_duration_s)) : null;
   const acceptedLatest = Boolean(goal?.accepted_assessment_id && assessment?.id === goal.accepted_assessment_id);
+  const workoutIsToday = nextWorkout?.scheduled_date === today;
+  const workoutMeta = nextWorkout ? [sportLabel(nextWorkout.sport), formatDuration(nextWorkout.duration_s), formatDistance(nextWorkout.distance_m)].filter(Boolean).join(" · ") : "";
 
   return (
     <main>
       <div className="frog-kicker">Aujourd'hui</div>
       <h1 className="frog-page-title">Bonjour {firstName} 👋</h1>
-      <p className="frog-page-subtitle">Ton état du jour utilise uniquement les données réellement disponibles dans Frog Pace.</p>
+      <p className="frog-page-subtitle">Ton état du jour et la séance prévue utilisent uniquement les données réellement disponibles dans Frog Pace.</p>
 
       <section className="frog-grid" aria-label="État du jour">
         <div className="frog-metric">
@@ -130,6 +172,32 @@ export default async function TodayPage() {
           <div className="frog-metric-value">{vo2max == null ? "—" : vo2max.toFixed(1)}</div>
         </div>
       </section>
+
+      {activePlan && nextWorkout ? <section className={`frog-card ${workoutIsToday ? "frog-card-soft" : ""}`} style={{ marginTop: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+          <div>
+            <div className="frog-kicker">{workoutIsToday ? "Séance du jour" : "Aujourd'hui · récupération"}</div>
+            <h2 className="frog-card-title" style={{ marginTop: 7 }}>{workoutIsToday ? nextWorkout.title : "Pas de séance planifiée aujourd’hui"}</h2>
+          </div>
+          <CalendarCheck2 size={22} />
+        </div>
+        {workoutIsToday ? <>
+          <div className="frog-card-text" style={{ marginTop: 8 }}>{workoutMeta}</div>
+          {nextWorkout.description && <p className="frog-card-text">{nextWorkout.description}</p>}
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 8 }}>
+            {nextWorkout.duration_s && <span className="frog-card-text" style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><Clock3 size={14} /> {formatDuration(nextWorkout.duration_s)}</span>}
+            {nextWorkout.distance_m && <span className="frog-card-text" style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><Route size={14} /> {formatDistance(nextWorkout.distance_m)}</span>}
+          </div>
+          <Link href={`/workouts/${nextWorkout.id}`} className="frog-button frog-button-primary" style={{ marginTop: 14 }}>Ouvrir ma séance <ArrowRight size={18} /></Link>
+        </> : <>
+          <p className="frog-card-text">Prochaine séance : <strong>{nextWorkout.title}</strong>, {new Date(`${nextWorkout.scheduled_date}T12:00:00`).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })} · {workoutMeta}.</p>
+          <Link href={`/workouts/${nextWorkout.id}`} className="frog-button frog-button-secondary" style={{ marginTop: 12 }}>Voir la prochaine séance <ArrowRight size={17} /></Link>
+        </>}
+      </section> : activePlan ? <section className="frog-card frog-empty" style={{ marginTop: 14 }}>
+        <div className="frog-empty-icon">✓</div>
+        <h2 className="frog-card-title">Aucune séance à venir dans ce plan</h2>
+        <Link href="/plan" className="frog-button frog-button-secondary" style={{ marginTop: 14 }}>Voir le plan <ArrowRight size={17} /></Link>
+      </section> : null}
 
       <section className="frog-card frog-card-soft" style={{ marginTop: 14 }}>
         <div className="frog-kicker">Avis Frog</div>
