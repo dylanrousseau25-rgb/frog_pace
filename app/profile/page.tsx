@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Brain, ChevronRight, Link2, LogOut, UserRound } from "lucide-react";
+import { Brain, ChevronRight, Link2, LogOut, Scale, ShieldCheck, Target, UserRound } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function ProfilePage() {
@@ -18,7 +18,7 @@ export default function ProfilePage() {
   return <main>
     <div className="frog-kicker">Profil</div>
     <h1 className="frog-page-title">Ton espace Frog</h1>
-    <p className="frog-page-subtitle">Ton profil, ta mémoire et tes connexions sont séparés pour que tu gardes le contrôle.</p>
+    <p className="frog-page-subtitle">Ton profil, ta mémoire, tes objectifs et tes connexions sont séparés pour que tu gardes le contrôle.</p>
 
     <div className="frog-menu-list">
       <Link href="/onboarding" className="frog-menu-card">
@@ -33,7 +33,22 @@ export default function ProfilePage() {
       </Link>
       <Link href="/profile/connections" className="frog-menu-card">
         <span className="frog-menu-icon"><Link2 size={20} /></span>
-        <span><strong>Connexions & appareils</strong><small>COROS maintenant, autres fournisseurs plus tard</small></span>
+        <span><strong>Connexions & appareils</strong><small>COROS et passerelle TrainingPeaks</small></span>
+        <ChevronRight size={18} />
+      </Link>
+      <Link href="/goals/manage" className="frog-menu-card">
+        <span className="frog-menu-icon"><Target size={20} /></span>
+        <span><strong>Cycle de préparation</strong><small>Abandonner proprement l’objectif principal et son plan actif</small></span>
+        <ChevronRight size={18} />
+      </Link>
+      <Link href="/profile/account" className="frog-menu-card">
+        <span className="frog-menu-icon"><ShieldCheck size={20} /></span>
+        <span><strong>Compte & données</strong><small>Contrôle des données et suppression définitive du compte</small></span>
+        <ChevronRight size={18} />
+      </Link>
+      <Link href="/legal" className="frog-menu-card">
+        <span className="frog-menu-icon"><Scale size={20} /></span>
+        <span><strong>Confidentialité & conditions</strong><small>Informations publiques sur le service et les données</small></span>
         <ChevronRight size={18} />
       </Link>
     </div>
