@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight, HeartPulse, MoonStar, Gauge, Sparkles } from "lucide-react";
+import { ArrowRight, HeartPulse, MoonStar, Gauge, Sparkles, Target } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function normalizeKey(value: string) {
@@ -33,12 +33,28 @@ function findNumber(root: unknown, candidateKeys: string[]) {
   return null;
 }
 
+function formatDuration(seconds: number | null) {
+  if (!seconds) return null;
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remaining = Math.floor(seconds % 60);
+  return `${hours}:${String(minutes).padStart(2, "0")}:${String(remaining).padStart(2, "0")}`;
+}
+
+function verdictLabel(verdict?: string | null) {
+  if (verdict === "feasible") return "Faisable";
+  if (verdict === "challenging") return "Ambitieux";
+  if (verdict === "not_recommended") return "Non recommandé";
+  if (verdict === "insufficient_data") return "Données insuffisantes";
+  return "À analyser";
+}
+
 export default async function TodayPage() {
   const supabase = await createSupabaseServerClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) redirect("/login");
 
-  const [{ data: profile }, { data: connection }, { data: snapshot }] = await Promise.all([
+  const [{ data: profile }, { data: connection }, { data: snapshot }, { data: goal }] = await Promise.all([
     supabase
       .from("user_profiles")
       .select("display_name,onboarding_completed")
@@ -57,10 +73,28 @@ export default async function TodayPage() {
       .eq("provider", "coros")
       .order("captured_at", { ascending: false })
       .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("goals")
+      .select("id,event_name,event_date,distance_m,target_duration_s,accepted_assessment_id")
+      .eq("user_id", auth.user.id)
+      .eq("goal_type", "primary")
+      .eq("status", "active")
       .maybeSingle()
   ]);
 
   if (!profile?.onboarding_completed) redirect("/onboarding");
+
+  const { data: assessment } = goal
+    ? await supabase
+        .from("goal_feasibility_assessments")
+        .select("id,verdict,score,summary")
+        .eq("goal_id", goal.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
+
   const firstName = profile.display_name?.trim() || "athlète";
   const connected = connection?.status === "connected";
   const recovery = snapshot?.recovery == null ? null : Number(snapshot.recovery);
@@ -68,6 +102,8 @@ export default async function TodayPage() {
   const shortLoad = snapshot?.short_load == null ? null : Number(snapshot.short_load);
   const loadRatio = snapshot?.load_ratio == null ? null : Number(snapshot.load_ratio);
   const vo2max = snapshot?.vo2max == null ? null : Number(snapshot.vo2max);
+  const target = goal?.target_duration_s ? formatDuration(Number(goal.target_duration_s)) : null;
+  const accepted = Boolean(goal?.accepted_assessment_id);
 
   return (
     <main>
@@ -110,12 +146,28 @@ export default async function TodayPage() {
         </Link>
       </section>
 
-      <section className="frog-card frog-empty">
+      {goal ? <section className="frog-card" style={{ marginTop: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+          <div>
+            <div className="frog-kicker">Objectif actif</div>
+            <h2 className="frog-card-title" style={{ marginTop: 7 }}>{goal.event_name}</h2>
+          </div>
+          <Target size={22} />
+        </div>
+        <p className="frog-card-text">
+          {(Number(goal.distance_m) / 1000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} km · {new Date(`${goal.event_date}T12:00:00`).toLocaleDateString("fr-FR")} {target ? `· cible ${target}` : ""}
+        </p>
+        <div className="frog-status-line" data-connected={assessment?.verdict === "feasible"} style={{ marginTop: 12 }}>
+          {verdictLabel(assessment?.verdict)}{assessment ? ` · ${assessment.score}/100` : ""}{accepted ? " · validé" : " · à valider"}
+        </div>
+        {assessment?.summary && <p className="frog-card-text">{assessment.summary}</p>}
+        <Link href="/goals" className="frog-button frog-button-primary" style={{ marginTop: 14 }}>Voir le Goal Engine <ArrowRight size={18} /></Link>
+      </section> : <section className="frog-card frog-empty">
         <div className="frog-empty-icon">🎯</div>
         <h2 className="frog-card-title">Aucun objectif actif</h2>
-        <p className="frog-card-text">La prochaine étape sera le Goal Engine : création de l’objectif puis analyse de faisabilité avant tout plan.</p>
-        <Link href="/profile/memory" className="frog-button frog-button-primary" style={{ marginTop: 18 }}>Voir ce que Frog sait de moi <ArrowRight size={18} /></Link>
-      </section>
+        <p className="frog-card-text">Crée ton objectif puis laisse Frog analyser sa faisabilité avant tout plan.</p>
+        <Link href="/goals" className="frog-button frog-button-primary" style={{ marginTop: 18 }}>Créer mon objectif <ArrowRight size={18} /></Link>
+      </section>}
     </main>
   );
 }
