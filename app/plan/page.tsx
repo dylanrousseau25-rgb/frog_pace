@@ -70,12 +70,12 @@ export default async function PlanPage() {
           <div className="frog-empty-icon"><LockKeyhole size={24} /></div>
           <h2 className="frog-card-title">Plan verrouillé</h2>
           <p className="frog-card-text">Une évaluation faisable ou ambitieuse doit être validée dans le Goal Engine avant que Frog construise le plan.</p>
-          <Link href="/goals" className="frog-button frog-button-primary" style={{ marginTop: 16 }}>Valider mon objectif <ArrowRight size={18} /></Link>
+          <Link href="/goals/validate" className="frog-button frog-button-primary" style={{ marginTop: 16 }}>Valider mon objectif <ArrowRight size={18} /></Link>
         </section> : !acceptedLatest ? <section className="frog-card frog-empty">
           <div className="frog-empty-icon"><LockKeyhole size={24} /></div>
           <h2 className="frog-card-title">Nouvelle analyse à valider</h2>
           <p className="frog-card-text">Une nouvelle évaluation existe depuis ta dernière validation. Le futur plan reste lié à la version que tu as acceptée tant que tu ne valides pas la nouvelle.</p>
-          <Link href="/goals" className="frog-button frog-button-primary" style={{ marginTop: 16 }}>Comparer et valider <ArrowRight size={18} /></Link>
+          <Link href="/goals/validate" className="frog-button frog-button-primary" style={{ marginTop: 16 }}>Comparer et valider <ArrowRight size={18} /></Link>
         </section> : <section className="frog-card frog-card-soft">
           <div className="frog-kicker">Prêt pour le Lot 4</div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
