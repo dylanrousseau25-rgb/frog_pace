@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, History, Loader2, RefreshCw, Unplug, Watch } from "lucide-react";
+import { CheckCircle2, DatabaseZap, History, Loader2, RefreshCw, Unplug, Watch } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type SyncInfo = {
@@ -207,13 +207,16 @@ export default function ConnectionsPage() {
           <button className="frog-button frog-button-secondary frog-button-wide" onClick={importThreeYears} disabled={actionBusy}>
             {historyBusy ? <Loader2 size={18} className="frog-spin" /> : <History size={18} />} {historyBusy ? "Import des 3 ans…" : "Importer les 3 dernières années"}
           </button>
+          <a href="/profile/connections/coros-details" className="frog-button frog-button-secondary frog-button-wide">
+            <DatabaseZap size={18} /> Enrichir les détails des activités
+          </a>
           <button className="frog-button frog-button-secondary frog-button-wide" onClick={disconnect} disabled={actionBusy}>
             <Unplug size={18} /> Déconnecter COROS
           </button>
         </div>
       )}
 
-      <p className="frog-footnote">L’import historique est relançable sans doublons. Déconnecter COROS supprime les jetons d’accès mais ne supprime jamais tes activités déjà importées dans Frog Pace.</p>
+      <p className="frog-footnote">L’import historique est relançable sans doublons. L’enrichissement détaillé récupère séparément les métriques avancées de chaque activité. Déconnecter COROS supprime les jetons d’accès mais ne supprime jamais tes activités déjà importées dans Frog Pace.</p>
     </section>
   </main>;
 }
