@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Clock3, Dumbbell, Gauge, Repeat2, Route, Watch } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import CorosWorkoutExportCard from "@/components/coros-workout-export-card";
 
 type Step = Record<string, unknown>;
 
@@ -181,7 +182,7 @@ export default async function WorkoutPage({ params }: { params: Promise<{ id: st
   return <main>
     <Link href="/plan" className="frog-button frog-button-secondary" style={{ marginBottom: 14 }}><ArrowLeft size={17} /> Retour au plan</Link>
 
-    <div className="frog-kicker">Lot 5 · Workout Builder</div>
+    <div className="frog-kicker">Workout Builder</div>
     <h1 className="frog-page-title">{workout.title}</h1>
     <p className="frog-page-subtitle">{new Date(`${workout.scheduled_date}T12:00:00`).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
 
@@ -197,14 +198,16 @@ export default async function WorkoutPage({ params }: { params: Promise<{ id: st
       <h2 className="frog-card-title" style={{ marginTop: 7 }}>{meta}</h2>
       {workout.description && <p className="frog-card-text">{workout.description}</p>}
       <div className="frog-status-line" data-connected={workout.device_export_ready} style={{ marginTop: 12 }}>
-        {workout.device_export_ready ? <><CheckCircle2 size={16} /> Structure prête pour le futur export COROS</> : <><Watch size={16} /> Séance guidée dans Frog Pace</>}
+        {workout.device_export_ready ? <><CheckCircle2 size={16} /> Structure compatible export montre</> : <><Watch size={16} /> Séance guidée dans Frog Pace</>}
       </div>
     </section>
+
+    <CorosWorkoutExportCard workoutId={workout.id} compatible={workout.device_export_ready} />
 
     <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
       {steps.map((step, index) => <StepCard key={index} step={step} index={index} />)}
     </div>
 
-    <p className="frog-footnote">Format {workout.workout_schema_version}. Le Lot 6 convertira les séances compatibles vers le format structuré COROS sans changer ce plan.</p>
+    <p className="frog-footnote">Format {workout.workout_schema_version}. Frog distingue désormais la compatibilité technique du Workout Builder et la disponibilité réelle de l’écriture chez COROS.</p>
   </main>;
 }
