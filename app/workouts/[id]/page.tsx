@@ -86,12 +86,14 @@ function exercisePrescription(exercise: Step) {
 
 function ExerciseCard({ exercise }: { exercise: Step }) {
   const key = String(exercise.exercise || "");
+  const prescription = exercisePrescription(exercise);
+  const cue = exercise.cue == null ? null : String(exercise.cue);
   return <div style={{ border: "1px solid var(--frog-border)", borderRadius: 16, padding: 12, display: "grid", gridTemplateColumns: "48px 1fr", gap: 12, alignItems: "start" }}>
     <div aria-hidden="true" style={{ width: 48, height: 48, borderRadius: 14, display: "grid", placeItems: "center", background: "var(--frog-surface-soft)", fontSize: 24 }}>{EXERCISE_VISUALS[key] || "●"}</div>
     <div>
       <strong>{String(exercise.name || key || "Exercice")}</strong>
-      {exercisePrescription(exercise) && <div className="frog-card-text" style={{ marginTop: 3 }}>{exercisePrescription(exercise)}</div>}
-      {exercise.cue && <div className="frog-card-text" style={{ marginTop: 6 }}>{String(exercise.cue)}</div>}
+      {prescription && <div className="frog-card-text" style={{ marginTop: 3 }}>{prescription}</div>}
+      {cue && <div className="frog-card-text" style={{ marginTop: 6 }}>{cue}</div>}
     </div>
   </div>;
 }
@@ -150,10 +152,11 @@ function StepCard({ step, index }: { step: Step; index: number }) {
   }
 
   const title = kind === "warmup" ? "Échauffement" : kind === "cooldown" ? "Retour au calme" : kind === "activation" ? "Activation" : kind === "mobility" ? "Mobilité" : label || kind;
+  const instructions = step.instructions == null ? null : String(step.instructions);
   return <section className="frog-card">
     <div className="frog-kicker">Bloc {index + 1}</div>
     <h2 className="frog-card-title" style={{ marginTop: 7 }}>{title}</h2>
-    <p className="frog-card-text">{formatDuration(Number(step.duration_s)) || ""}{step.instructions ? `${step.duration_s ? " · " : ""}${String(step.instructions)}` : ""}</p>
+    <p className="frog-card-text">{formatDuration(Number(step.duration_s)) || ""}{instructions ? `${step.duration_s ? " · " : ""}${instructions}` : ""}</p>
   </section>;
 }
 
