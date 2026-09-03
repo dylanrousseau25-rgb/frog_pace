@@ -6,7 +6,7 @@ import { BottomNav } from "./bottom-nav";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  if (pathname === "/login" || pathname.startsWith("/auth/")) return <>{children}</>;
+  if (pathname === "/login" || pathname.startsWith("/auth/") || pathname.startsWith("/legal")) return <>{children}</>;
 
   return (
     <div className="frog-shell">
