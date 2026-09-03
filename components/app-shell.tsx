@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BottomNav } from "./bottom-nav";
+import { AutoCorosSync } from "./auto-coros-sync";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -10,6 +11,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="frog-shell">
+      <AutoCorosSync />
       <header className="frog-header">
         <Link href="/today" className="frog-brand">
           <span className="frog-logo">🐸</span>
