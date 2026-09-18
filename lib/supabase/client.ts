@@ -1,6 +1,6 @@
 "use client";
 
-import type { QueryAction, QueryFilter, QueryOrder, QuerySpec } from "@/lib/local/query";
+import type { QueryFilter, QueryOrder, QuerySpec } from "@/lib/local/query";
 
 class RemoteQueryBuilder implements PromiseLike<any> {
   private spec: QuerySpec;
@@ -12,7 +12,7 @@ class RemoteQueryBuilder implements PromiseLike<any> {
   select(columns = "*") { this.spec.columns = columns; return this; }
   insert(values: Record<string, unknown> | Record<string, unknown>[]) { this.spec.action = "insert"; this.spec.values = values; return this; }
   update(values: Record<string, unknown>) { this.spec.action = "update"; this.spec.values = values; return this; }
-  upsert(values: Record<string, unknown> | Record<string, unknown>[]) { this.spec.action = "upsert"; this.spec.values = values; return this; }
+  upsert(values: Record<string, unknown> | Record<string, unknown>[], _options?: { onConflict?: string }) { this.spec.action = "upsert"; this.spec.values = values; return this; }
   delete() { this.spec.action = "delete"; return this; }
 
   private filter(field: string, op: QueryFilter["op"], value: unknown) {
@@ -34,7 +34,7 @@ class RemoteQueryBuilder implements PromiseLike<any> {
     return this;
   }
   limit(limit: number) { this.spec.limit = limit; return this; }
-  range(from: number, to: number) { this.spec.limit = Math.max(0, to - from + 1); return this; }
+  range(from: number, to: number) { this.spec.offset = from; this.spec.limit = Math.max(0, to - from + 1); return this; }
 
   single() { this.spec.single = "single"; return this.execute(); }
   maybeSingle() { this.spec.single = "maybeSingle"; return this.execute(); }
