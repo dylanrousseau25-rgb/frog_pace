@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     const origin = new URL(request.url).origin;
     const redirectUri = `${origin}/api/coros/callback`;
     const result = await callCorosBridge("start", { redirectUri });
-    if (!result?.authorizationUrl) throw new Error("URL d’autorisation COROS manquante");
+    if (!("authorizationUrl" in result) || !result.authorizationUrl) throw new Error("URL d’autorisation COROS manquante");
     return NextResponse.redirect(result.authorizationUrl);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Connexion COROS impossible";
