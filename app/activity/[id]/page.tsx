@@ -18,6 +18,16 @@ type Activity = {
   training_load: number | string | null;
 };
 
+type PlannedWorkoutCandidate = {
+  id: string;
+  scheduled_date: string;
+  title: string;
+  sport: string;
+  workout_type: string;
+  duration_s: number | null;
+  distance_m: number | string | null;
+};
+
 function formatDuration(seconds?: number | null) {
   const value = Number(seconds);
   if (!Number.isFinite(value) || value <= 0) return "—";
@@ -100,7 +110,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
     .limit(1)
     .maybeSingle();
 
-  let candidates: any[] = [];
+  let candidates: PlannedWorkoutCandidate[] = [];
   if (!matchRow && activePlan && activity.started_at) {
     const activityDate = new Date(activity.started_at);
     const start = new Date(activityDate);
@@ -115,7 +125,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
       .gte("scheduled_date", start.toISOString().slice(0, 10))
       .lte("scheduled_date", end.toISOString().slice(0, 10))
       .order("scheduled_date");
-    candidates = (rows || []).filter((row) => sportCompatible(row.sport, activity.sport_type));
+    candidates = ((rows || []) as PlannedWorkoutCandidate[]).filter((row: PlannedWorkoutCandidate) => sportCompatible(row.sport, activity.sport_type));
   }
 
   const speed = Number(activity.avg_speed_kmh);
