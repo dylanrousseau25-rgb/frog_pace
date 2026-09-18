@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     let sync = "success";
     try {
       const result = await callCorosBridge("sync", { syncType: "initial" });
-      sync = result?.status || "success";
+      sync = "status" in result ? String(result.status || "success") : "success";
     } catch {
       sync = "error";
     }
