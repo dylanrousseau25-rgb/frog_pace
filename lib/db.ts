@@ -18,6 +18,7 @@ export function getDb() {
       database: required("DB_NAME"),
       charset: "utf8mb4",
       timezone: "Z",
+      dateStrings: true,
       connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 6),
       waitForConnections: true,
       enableKeepAlive: true,
