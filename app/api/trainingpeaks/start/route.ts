@@ -11,10 +11,11 @@ export async function GET(request: Request) {
     const origin = new URL(request.url).origin;
     const redirectUri = `${origin}/api/trainingpeaks/callback`;
     const result = await callTrainingPeaksBridge("start", { redirectUri });
-    if (!result?.authorizationUrl) {
+    if (!("authorizationUrl" in result) || !result.authorizationUrl) {
       const url = new URL("/profile/connections", request.url);
       url.searchParams.set("trainingpeaks", "blocked");
-      url.searchParams.set("message", result?.blockerMessage || "Accès partenaire TrainingPeaks requis.");
+      const blockerMessage = "blockerMessage" in result ? String(result.blockerMessage || "") : "";
+      url.searchParams.set("message", blockerMessage || "Accès partenaire TrainingPeaks requis.");
       return NextResponse.redirect(url);
     }
     return NextResponse.redirect(result.authorizationUrl);
