@@ -9,8 +9,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.7.0",
-    "@supabase/supabase-js": "^2.56.0",
     "bcryptjs": "^3.0.3",
     "lucide-react": "^0.468.0",
     "mysql2": "^3.24.4",
