@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { callCorosBridge } from "@/lib/coros/bridge";
+import { enrichCorosActivityDetails } from "@/lib/coros/activity-details";
 
 export async function POST() {
   const supabase = await createSupabaseServerClient();
@@ -12,10 +13,7 @@ export async function POST() {
 
     let detailEnrichment: unknown = null;
     try {
-      const { data, error } = await supabase.functions.invoke("coros-activity-details", {
-        body: { batchSize: 8 }
-      });
-      detailEnrichment = error ? { error: error.message } : data;
+      detailEnrichment = await enrichCorosActivityDetails(auth.user.id, 8, false);
     } catch (detailError) {
       detailEnrichment = {
         error: detailError instanceof Error ? detailError.message : "Enrichissement des activités impossible"
