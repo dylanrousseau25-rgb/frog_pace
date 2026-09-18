@@ -14,6 +14,7 @@ export type QuerySpec = {
   filters?: QueryFilter[];
   orders?: QueryOrder[];
   limit?: number;
+  offset?: number;
   single?: "single" | "maybeSingle";
 };
 
@@ -32,7 +33,7 @@ const POLICY: Record<string, Set<QueryAction>> = {
   planned_workouts: new Set(["select"]),
   workout_exports: new Set(["select"]),
   workout_matches: new Set(["select"]),
-  workout_feedback: new Set(["select", "insert", "update", "delete"]),
+  workout_feedback: new Set(["select", "insert", "update", "delete", "upsert"]),
   workout_analyses: new Set(["select"]),
   weekly_reviews: new Set(["select"]),
   plan_adaptations: new Set(["select"]),
@@ -48,6 +49,12 @@ const TABLES_WITH_ID = new Set([
   "weekly_reviews", "plan_adaptations", "race_strategies", "coach_threads", "coach_messages",
 ]);
 
+const UPSERT_KEYS: Record<string, string[]> = {
+  workout_feedback: ["match_id"],
+};
+
+const GOAL_REFERENCE_FIELDS = new Set(["sport", "event_name", "event_date", "distance_m", "target_duration_s", "parent_goal_id"]);
+
 function ident(value: string) {
   if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(value)) throw new Error(`Identifiant SQL invalide: ${value}`);
   return `\`${value}\``;
@@ -59,11 +66,13 @@ function selectList(columns = "*") {
 }
 
 function dbValue(value: unknown) {
-  if (value === undefined) return null;
-  if (value === null) return null;
+  if (value === undefined || value === null) return null;
   if (typeof value === "boolean") return value ? 1 : 0;
   if (value instanceof Date) return value;
   if (Array.isArray(value) || (typeof value === "object" && value !== null)) return JSON.stringify(value);
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(value)) {
+    return new Date(value);
+  }
   return value;
 }
 
@@ -79,8 +88,7 @@ function buildFilters(filters: QueryFilter[], params: unknown[]) {
       continue;
     }
     if (filter.op === "is") {
-      if (filter.value === null) parts.push(`${field} is null`);
-      else parts.push(`${field} is not null`);
+      parts.push(filter.value === null ? `${field} is null` : `${field} is not null`);
       continue;
     }
     const op = ({ eq: "=", neq: "<>", gt: ">", gte: ">=", lt: "<", lte: "<=" } as const)[filter.op];
@@ -90,21 +98,29 @@ function buildFilters(filters: QueryFilter[], params: unknown[]) {
   return parts;
 }
 
+function securedFilters(userId: string, filters: QueryFilter[] = []) {
+  const result = filters.filter((filter) => filter.field !== "user_id");
+  result.push({ field: "user_id", op: "eq", value: userId });
+  return result;
+}
+
 export async function runUserQuery(userId: string, spec: QuerySpec) {
   const permissions = POLICY[spec.table];
   if (!permissions || !permissions.has(spec.action)) throw new Error("Opération non autorisée");
 
   const table = ident(spec.table);
-  const filters = [...(spec.filters || []).filter((filter) => filter.field !== "user_id")];
-  filters.push({ field: "user_id", op: "eq", value: userId });
+  const filters = securedFilters(userId, spec.filters);
 
   if (spec.action === "select") {
     const params: unknown[] = [];
     const where = buildFilters(filters, params);
     let sql = `select ${selectList(spec.columns)} from ${table} where ${where.join(" and ")}`;
     if (spec.orders?.length) sql += ` order by ${spec.orders.map((order) => `${ident(order.field)} ${order.ascending ? "asc" : "desc"}`).join(",")}`;
-    if (spec.limit != null) sql += ` limit ${Math.max(0, Math.min(1000, Math.trunc(spec.limit)))}`;
-    else if (spec.single) sql += " limit 2";
+    const limit = spec.limit != null ? Math.max(0, Math.min(1000, Math.trunc(spec.limit))) : spec.single ? 2 : null;
+    if (limit != null) {
+      sql += ` limit ${limit}`;
+      if (spec.offset != null) sql += ` offset ${Math.max(0, Math.trunc(spec.offset))}`;
+    }
     const data = await rows(sql, params);
     if (spec.single === "single") {
       if (data.length !== 1) return { data: null, error: { message: data.length ? "Plusieurs résultats" : "Résultat introuvable" } };
@@ -123,7 +139,7 @@ export async function runUserQuery(userId: string, spec: QuerySpec) {
     for (const input of inputRows) {
       const value = { ...input, user_id: userId } as Record<string, unknown>;
       if (TABLES_WITH_ID.has(spec.table) && !value.id) value.id = randomUUID();
-      if (spec.table === "coach_messages") value.role = value.role === "assistant" ? "user" : value.role;
+      if (spec.table === "coach_messages" && value.role !== "user") throw new Error("Seuls les messages utilisateur peuvent être insérés depuis le navigateur");
       const fields = Object.keys(value);
       if (!fields.length) throw new Error("Insertion vide");
       await execute(
@@ -139,10 +155,32 @@ export async function runUserQuery(userId: string, spec: QuerySpec) {
     return { data: null, error: null };
   }
 
+  if (spec.action === "upsert") {
+    const conflictKeys = UPSERT_KEYS[spec.table];
+    if (!conflictKeys) throw new Error("Upsert non autorisé pour cette table");
+    const inputRows = Array.isArray(spec.values) ? spec.values : [spec.values || {}];
+    for (const input of inputRows) {
+      const value = { ...input, user_id: userId } as Record<string, unknown>;
+      if (TABLES_WITH_ID.has(spec.table) && !value.id) value.id = randomUUID();
+      for (const key of conflictKeys) if (!value[key]) throw new Error(`Clé d'upsert manquante: ${key}`);
+      const fields = Object.keys(value);
+      const updates = fields.filter((field) => !["id", "user_id", ...conflictKeys].includes(field));
+      await execute(
+        `insert into ${table} (${fields.map(ident).join(",")}) values (${fields.map(() => "?").join(",")}) on duplicate key update ${updates.map((field) => `${ident(field)}=values(${ident(field)})`).join(",")}`,
+        fields.map((field) => dbValue(value[field]))
+      );
+    }
+    return { data: null, error: null };
+  }
+
   if (spec.action === "update") {
     const value = { ...(Array.isArray(spec.values) ? spec.values[0] : spec.values || {}) } as Record<string, unknown>;
     delete value.user_id;
     delete value.id;
+    if (spec.table === "goals" && Object.keys(value).some((field) => GOAL_REFERENCE_FIELDS.has(field))) {
+      value.accepted_assessment_id = null;
+      value.accepted_at = null;
+    }
     const fields = Object.keys(value);
     if (!fields.length) return { data: null, error: null };
     const params: unknown[] = fields.map((field) => dbValue(value[field]));
@@ -158,5 +196,5 @@ export async function runUserQuery(userId: string, spec: QuerySpec) {
     return { data: null, error: null };
   }
 
-  throw new Error("Upsert utilisateur non pris en charge");
+  throw new Error("Opération non prise en charge");
 }
