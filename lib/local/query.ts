@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { execute, row, rows } from "@/lib/db";
 
-export type FilterOp = "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "in" | "is";
+export type FilterOp = "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "in" | "is" | "is_not";
 export type QueryFilter = { field: string; op: FilterOp; value: unknown };
 export type QueryOrder = { field: string; ascending: boolean };
 export type QueryAction = "select" | "insert" | "update" | "delete" | "upsert";
@@ -16,6 +16,8 @@ export type QuerySpec = {
   limit?: number;
   offset?: number;
   single?: "single" | "maybeSingle";
+  count?: "exact";
+  head?: boolean;
 };
 
 const POLICY: Record<string, Set<QueryAction>> = {
@@ -83,6 +85,7 @@ function buildFilters(filters: QueryFilter[], params: unknown[]) {
       continue;
     }
     if (filter.op === "is") { parts.push(filter.value === null ? `${field} is null` : `${field} is not null`); continue; }
+    if (filter.op === "is_not") { parts.push(filter.value === null ? `${field} is not null` : `${field} is null`); continue; }
     const op = ({ eq: "=", neq: "<>", gt: ">", gte: ">=", lt: "<", lte: "<=" } as const)[filter.op];
     parts.push(`${field} ${op} ?`);
     params.push(dbValue(filter.value));
@@ -98,7 +101,7 @@ function securedFilters(userId: string, filters: QueryFilter[] = []) {
 
 function relationSelect(table: string, columns = "*") {
   if (table === "plan_adaptations" && columns.includes("planned_workouts(scheduled_date,title)")) {
-    let base = columns.replace(/,?planned_workouts\(scheduled_date,title\),?/, ",").replace(/^,|,$/g, "");
+    const base = columns.replace(/,?planned_workouts\(scheduled_date,title\),?/, ",").replace(/^,|,$/g, "");
     const fields = base.split(",").map((value) => value.trim()).filter(Boolean);
     if (!fields.includes("planned_workout_id")) fields.push("planned_workout_id");
     return { columns: fields.join(","), plannedWorkout: true };
@@ -114,6 +117,14 @@ export async function runUserQuery(userId: string, spec: QuerySpec) {
 
   if (spec.action === "select") {
     const relation = relationSelect(spec.table, spec.columns);
+    const countParams: unknown[] = [];
+    const countWhere = buildFilters(filters, countParams);
+    const countRow = spec.count === "exact"
+      ? await row<{ total: number }>(`select count(*) as total from ${table} where ${countWhere.join(" and ")}`, countParams)
+      : null;
+    const count = spec.count === "exact" ? Number(countRow?.total || 0) : null;
+    if (spec.head) return { data: null, count, error: null };
+
     const params: unknown[] = [];
     const where = buildFilters(filters, params);
     let sql = `select ${selectList(relation.columns)} from ${table} where ${where.join(" and ")}`;
@@ -130,14 +141,14 @@ export async function runUserQuery(userId: string, spec: QuerySpec) {
       }
     }
     if (spec.single === "single") {
-      if (data.length !== 1) return { data: null, error: { message: data.length ? "Plusieurs résultats" : "Résultat introuvable" } };
-      return { data: data[0], error: null };
+      if (data.length !== 1) return { data: null, count, error: { message: data.length ? "Plusieurs résultats" : "Résultat introuvable" } };
+      return { data: data[0], count, error: null };
     }
     if (spec.single === "maybeSingle") {
-      if (data.length > 1) return { data: null, error: { message: "Plusieurs résultats" } };
-      return { data: data[0] || null, error: null };
+      if (data.length > 1) return { data: null, count, error: { message: "Plusieurs résultats" } };
+      return { data: data[0] || null, count, error: null };
     }
-    return { data, error: null };
+    return { data, count, error: null };
   }
 
   if (spec.action === "insert") {
