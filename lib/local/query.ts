@@ -49,10 +49,7 @@ const TABLES_WITH_ID = new Set([
   "weekly_reviews", "plan_adaptations", "race_strategies", "coach_threads", "coach_messages",
 ]);
 
-const UPSERT_KEYS: Record<string, string[]> = {
-  workout_feedback: ["match_id"],
-};
-
+const UPSERT_KEYS: Record<string, string[]> = { workout_feedback: ["match_id"] };
 const GOAL_REFERENCE_FIELDS = new Set(["sport", "event_name", "event_date", "distance_m", "target_duration_s", "parent_goal_id"]);
 
 function ident(value: string) {
@@ -70,9 +67,7 @@ function dbValue(value: unknown) {
   if (typeof value === "boolean") return value ? 1 : 0;
   if (value instanceof Date) return value;
   if (Array.isArray(value) || (typeof value === "object" && value !== null)) return JSON.stringify(value);
-  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(value)) {
-    return new Date(value);
-  }
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(value)) return new Date(value);
   return value;
 }
 
@@ -87,10 +82,7 @@ function buildFilters(filters: QueryFilter[], params: unknown[]) {
       params.push(...values.map(dbValue));
       continue;
     }
-    if (filter.op === "is") {
-      parts.push(filter.value === null ? `${field} is null` : `${field} is not null`);
-      continue;
-    }
+    if (filter.op === "is") { parts.push(filter.value === null ? `${field} is null` : `${field} is not null`); continue; }
     const op = ({ eq: "=", neq: "<>", gt: ">", gte: ">=", lt: "<", lte: "<=" } as const)[filter.op];
     parts.push(`${field} ${op} ?`);
     params.push(dbValue(filter.value));
@@ -104,24 +96,39 @@ function securedFilters(userId: string, filters: QueryFilter[] = []) {
   return result;
 }
 
+function relationSelect(table: string, columns = "*") {
+  if (table === "plan_adaptations" && columns.includes("planned_workouts(scheduled_date,title)")) {
+    let base = columns.replace(/,?planned_workouts\(scheduled_date,title\),?/, ",").replace(/^,|,$/g, "");
+    const fields = base.split(",").map((value) => value.trim()).filter(Boolean);
+    if (!fields.includes("planned_workout_id")) fields.push("planned_workout_id");
+    return { columns: fields.join(","), plannedWorkout: true };
+  }
+  return { columns, plannedWorkout: false };
+}
+
 export async function runUserQuery(userId: string, spec: QuerySpec) {
   const permissions = POLICY[spec.table];
   if (!permissions || !permissions.has(spec.action)) throw new Error("Opération non autorisée");
-
   const table = ident(spec.table);
   const filters = securedFilters(userId, spec.filters);
 
   if (spec.action === "select") {
+    const relation = relationSelect(spec.table, spec.columns);
     const params: unknown[] = [];
     const where = buildFilters(filters, params);
-    let sql = `select ${selectList(spec.columns)} from ${table} where ${where.join(" and ")}`;
+    let sql = `select ${selectList(relation.columns)} from ${table} where ${where.join(" and ")}`;
     if (spec.orders?.length) sql += ` order by ${spec.orders.map((order) => `${ident(order.field)} ${order.ascending ? "asc" : "desc"}`).join(",")}`;
     const limit = spec.limit != null ? Math.max(0, Math.min(1000, Math.trunc(spec.limit))) : spec.single ? 2 : null;
-    if (limit != null) {
-      sql += ` limit ${limit}`;
-      if (spec.offset != null) sql += ` offset ${Math.max(0, Math.trunc(spec.offset))}`;
+    if (limit != null) { sql += ` limit ${limit}`; if (spec.offset != null) sql += ` offset ${Math.max(0, Math.trunc(spec.offset))}`; }
+    const data = await rows<any>(sql, params);
+    if (relation.plannedWorkout) {
+      for (const item of data) {
+        item.planned_workouts = item.planned_workout_id
+          ? await row("select scheduled_date,title from planned_workouts where id=? and user_id=? limit 1", [item.planned_workout_id, userId])
+          : null;
+        delete item.planned_workout_id;
+      }
     }
-    const data = await rows(sql, params);
     if (spec.single === "single") {
       if (data.length !== 1) return { data: null, error: { message: data.length ? "Plusieurs résultats" : "Résultat introuvable" } };
       return { data: data[0], error: null };
@@ -142,10 +149,7 @@ export async function runUserQuery(userId: string, spec: QuerySpec) {
       if (spec.table === "coach_messages" && value.role !== "user") throw new Error("Seuls les messages utilisateur peuvent être insérés depuis le navigateur");
       const fields = Object.keys(value);
       if (!fields.length) throw new Error("Insertion vide");
-      await execute(
-        `insert into ${table} (${fields.map(ident).join(",")}) values (${fields.map(() => "?").join(",")})`,
-        fields.map((field) => dbValue(value[field]))
-      );
+      await execute(`insert into ${table} (${fields.map(ident).join(",")}) values (${fields.map(() => "?").join(",")})`, fields.map((field) => dbValue(value[field])));
       if (typeof value.id === "string") insertedIds.push(value.id);
     }
     if (spec.columns && insertedIds.length === 1) {
@@ -165,22 +169,15 @@ export async function runUserQuery(userId: string, spec: QuerySpec) {
       for (const key of conflictKeys) if (!value[key]) throw new Error(`Clé d'upsert manquante: ${key}`);
       const fields = Object.keys(value);
       const updates = fields.filter((field) => !["id", "user_id", ...conflictKeys].includes(field));
-      await execute(
-        `insert into ${table} (${fields.map(ident).join(",")}) values (${fields.map(() => "?").join(",")}) on duplicate key update ${updates.map((field) => `${ident(field)}=values(${ident(field)})`).join(",")}`,
-        fields.map((field) => dbValue(value[field]))
-      );
+      await execute(`insert into ${table} (${fields.map(ident).join(",")}) values (${fields.map(() => "?").join(",")}) on duplicate key update ${updates.map((field) => `${ident(field)}=values(${ident(field)})`).join(",")}`, fields.map((field) => dbValue(value[field])));
     }
     return { data: null, error: null };
   }
 
   if (spec.action === "update") {
     const value = { ...(Array.isArray(spec.values) ? spec.values[0] : spec.values || {}) } as Record<string, unknown>;
-    delete value.user_id;
-    delete value.id;
-    if (spec.table === "goals" && Object.keys(value).some((field) => GOAL_REFERENCE_FIELDS.has(field))) {
-      value.accepted_assessment_id = null;
-      value.accepted_at = null;
-    }
+    delete value.user_id; delete value.id;
+    if (spec.table === "goals" && Object.keys(value).some((field) => GOAL_REFERENCE_FIELDS.has(field))) { value.accepted_assessment_id = null; value.accepted_at = null; }
     const fields = Object.keys(value);
     if (!fields.length) return { data: null, error: null };
     const params: unknown[] = fields.map((field) => dbValue(value[field]));
