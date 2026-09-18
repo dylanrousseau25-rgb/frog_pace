@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -26,33 +25,22 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     setMessage(null);
-    const supabase = createSupabaseBrowserClient();
 
-    if (mode === "signup") {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { display_name: displayName.trim() },
-          emailRedirectTo: `${window.location.origin}/auth/callback`
-        }
+    try {
+      const response = await fetch(mode === "signup" ? "/api/auth/signup" : "/api/auth/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(mode === "signup" ? { email, password, displayName } : { email, password }),
       });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body?.error || "Authentification impossible.");
+      router.replace(mode === "signup" ? "/onboarding" : "/today");
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Authentification impossible.");
+    } finally {
       setLoading(false);
-      if (signUpError) return setError(signUpError.message);
-      if (data.session) {
-        router.replace("/today");
-        router.refresh();
-      } else {
-        setMessage("Compte créé. Vérifie ton e-mail pour confirmer ton inscription.");
-      }
-      return;
     }
-
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (signInError) return setError(signInError.message);
-    router.replace("/today");
-    router.refresh();
   }
 
   return (

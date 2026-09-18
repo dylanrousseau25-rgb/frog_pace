@@ -16,6 +16,7 @@ type ActivityRow = {
 };
 
 type MatchRow = { id: string; activity_id: string; status: string };
+type FeedbackRow = { match_id: string };
 
 function numeric(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -81,12 +82,13 @@ export default async function ActivityPage() {
   const { data: matchRows } = activityIds.length
     ? await supabase.from("workout_matches").select("id,activity_id,status").eq("user_id", auth.user.id).in("activity_id", activityIds)
     : { data: [] };
-  const matches = new Map((matchRows || []).map((row) => [row.activity_id, row as MatchRow]));
-  const confirmedMatchIds = (matchRows || []).filter((row) => row.status === "confirmed").map((row) => row.id);
+  const typedMatchRows = (matchRows || []) as MatchRow[];
+  const matches = new Map<string, MatchRow>(typedMatchRows.map((row: MatchRow) => [row.activity_id, row]));
+  const confirmedMatchIds = typedMatchRows.filter((row: MatchRow) => row.status === "confirmed").map((row: MatchRow) => row.id);
   const { data: feedbackRows } = confirmedMatchIds.length
     ? await supabase.from("workout_feedback").select("match_id").eq("user_id", auth.user.id).in("match_id", confirmedMatchIds)
     : { data: [] };
-  const feedbackMatchIds = new Set((feedbackRows || []).map((row) => row.match_id));
+  const feedbackMatchIds = new Set<string>(((feedbackRows || []) as FeedbackRow[]).map((row: FeedbackRow) => row.match_id));
 
   return <main>
     <div className="frog-kicker">Activité</div>
