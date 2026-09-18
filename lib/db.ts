@@ -40,17 +40,17 @@ export function normalizeRow<T = Record<string, unknown>>(row: Record<string, un
   return Object.fromEntries(Object.entries(row).map(([key, value]) => [key, maybeJson(value)])) as T;
 }
 
-export async function rows<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T[]> {
+export async function rows<T = Record<string, unknown>>(sql: string, params: any[] = []): Promise<T[]> {
   const [result] = await getDb().execute<RowDataPacket[]>(sql, params);
   return result.map((row) => normalizeRow<T>(row as Record<string, unknown>));
 }
 
-export async function row<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T | null> {
+export async function row<T = Record<string, unknown>>(sql: string, params: any[] = []): Promise<T | null> {
   const result = await rows<T>(sql, params);
   return result[0] || null;
 }
 
-export async function execute(sql: string, params: unknown[] = []) {
+export async function execute(sql: string, params: any[] = []) {
   const [result] = await getDb().execute(sql, params);
   return result;
 }
