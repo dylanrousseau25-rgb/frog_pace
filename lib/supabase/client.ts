@@ -9,7 +9,12 @@ class RemoteQueryBuilder implements PromiseLike<any> {
     this.spec = { table, action: "select", filters: [], orders: [] };
   }
 
-  select(columns = "*") { this.spec.columns = columns; return this; }
+  select(columns = "*", options: { count?: "exact"; head?: boolean } = {}) {
+    this.spec.columns = columns;
+    this.spec.count = options.count;
+    this.spec.head = options.head;
+    return this;
+  }
   insert(values: Record<string, unknown> | Record<string, unknown>[]) { this.spec.action = "insert"; this.spec.values = values; return this; }
   update(values: Record<string, unknown>) { this.spec.action = "update"; this.spec.values = values; return this; }
   upsert(values: Record<string, unknown> | Record<string, unknown>[], _options?: { onConflict?: string }) { this.spec.action = "upsert"; this.spec.values = values; return this; }
@@ -27,9 +32,14 @@ class RemoteQueryBuilder implements PromiseLike<any> {
   lte(field: string, value: unknown) { return this.filter(field, "lte", value); }
   in(field: string, value: unknown[]) { return this.filter(field, "in", value); }
   is(field: string, value: unknown) { return this.filter(field, "is", value); }
+  not(field: string, operator: string, value: unknown) {
+    if (operator === "is") return this.filter(field, "is_not", value);
+    if (operator === "eq") return this.filter(field, "neq", value);
+    throw new Error(`Opérateur not non pris en charge: ${operator}`);
+  }
   match(values: Record<string, unknown>) { Object.entries(values).forEach(([field, value]) => this.eq(field, value)); return this; }
 
-  order(field: string, options: { ascending?: boolean } = {}) {
+  order(field: string, options: { ascending?: boolean; nullsFirst?: boolean } = {}) {
     (this.spec.orders ||= []).push({ field, ascending: options.ascending !== false } as QueryOrder);
     return this;
   }
@@ -83,7 +93,7 @@ export function createSupabaseBrowserClient() {
         const body = await response.json().catch(() => ({ user: null }));
         return { data: { session: body.user ? { user: body.user } : null }, error: response.ok ? null : { message: "Session expirée" } };
       },
-      async signOut() {
+      async signOut(_options?: { scope?: string }) {
         const { response, payload } = await postJson("/api/auth/logout");
         return { error: response.ok ? null : { message: payload?.error || "Déconnexion impossible" } };
       },
